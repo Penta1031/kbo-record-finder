@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
+  Activity,
   ArrowLeft,
   ArrowRight,
   CalendarDays,
@@ -11,6 +12,7 @@ import {
   Heart,
   Info,
   MapPin,
+  Radio,
   Search,
   Settings2,
   SlidersHorizontal,
@@ -60,6 +62,69 @@ const GAMES = {
   ],
 };
 
+const LIVE_FEEDS = {
+  'lg-hh': {
+    status: '경기 전',
+    inning: '18:30 예정',
+    score: { away: 0, home: 0 },
+    bases: [false, false, false],
+    outs: 0,
+    pitcher: '류현진',
+    batter: '홍창기',
+    headline: '라인업 발표 전입니다. 경기 시작 후 타석별 문자중계가 갱신됩니다.',
+    timeline: [
+      { time: '17:45', label: '라인업 대기', text: '양 팀 선발 라인업 확인 중' },
+      { time: '17:30', label: '선발 예고', text: 'LG 선발 엔스, 한화 선발 류현진' },
+      { time: '16:50', label: '구장 상태', text: '대전구장 정상 진행 예정' },
+    ],
+  },
+  'hh-lg': {
+    status: 'LIVE',
+    inning: '5회말',
+    score: { away: 2, home: 3 },
+    bases: [true, false, true],
+    outs: 1,
+    pitcher: '문동주',
+    batter: '오지환',
+    headline: '오지환이 2루타 하나를 추가하면 개인 통산 300 2루타에 도달합니다.',
+    timeline: [
+      { time: '20:12', label: '타석', text: '오지환 타석, 1사 1·3루' },
+      { time: '20:08', label: '안타', text: '문보경 우전 안타, LG 1·3루 기회' },
+      { time: '19:55', label: '득점', text: 'LG 희생플라이로 3-2 역전' },
+      { time: '19:41', label: '교체', text: '한화 불펜 준비 시작' },
+    ],
+  },
+  'lg-sk': {
+    status: '경기 전',
+    inning: '18:30 예정',
+    score: { away: 0, home: 0 },
+    bases: [false, false, false],
+    outs: 0,
+    pitcher: '김광현',
+    batter: '홍창기',
+    headline: 'SSG전 시작 후 실시간 기록 트리거를 확인합니다.',
+    timeline: [
+      { time: '17:20', label: '프리뷰', text: 'LG 원정 경기 기록 후보 2건 대기' },
+      { time: '16:40', label: '구장', text: '인천 경기 정상 진행 예정' },
+    ],
+  },
+};
+
+const DEFAULT_LIVE_FEED = {
+  status: '경기 전',
+  inning: '18:30 예정',
+  score: { away: 0, home: 0 },
+  bases: [false, false, false],
+  outs: 0,
+  pitcher: '선발 투수',
+  batter: '1번 타자',
+  headline: '공식 데이터 연동 전까지는 자체 계산 데모 피드로 표시됩니다.',
+  timeline: [
+    { time: '17:30', label: '대기', text: '문자중계 데이터 연결 준비 중' },
+    { time: '16:30', label: '일정', text: '경기 시작 전 상태입니다.' },
+  ],
+};
+
 const RECORD_INPUTS = [
   {
     id: 1, date: '2026-06-30', game: 'lg-hh', team: 'HH', player: '문현빈', role: '타자',
@@ -93,8 +158,13 @@ const RECORD_INPUTS = [
   },
   {
     id: 7, date: '2026-07-01', game: 'hh-lg', team: 'LG', player: '오지환', role: '타자',
-    milestone: 300, current: 299, unit: '2루타', title: '개인 통산 300 2루타', recent: [0, 1, 0, 0, 1],
+    milestone: 300, current: 299, unit: '개', title: '개인 통산 300 2루타', recent: [0, 1, 0, 0, 1],
     season: { 경기: 71, 타율: '0.274', 안타: 70, 홈런: 7, 타점: 35 }, note: '2루타 하나면 달성합니다.',
+  },
+  {
+    id: 9, date: '2026-07-01', game: 'hh-lg', team: 'HH', player: '노시환', role: '타자',
+    milestone: 500, current: 498, unit: '타점', title: '개인 통산 500타점', recent: [1, 0, 2, 1, 0],
+    season: { 경기: 73, 타율: '0.291', 안타: 78, 홈런: 17, 타점: 55 }, note: 'LG전에서 2타점을 더하면 달성합니다.',
   },
   {
     id: 8, date: '2026-07-02', game: 'kia-hh', team: 'HH', player: '노시환', role: '타자',
@@ -119,6 +189,11 @@ const TEAM_RECORD_INPUTS = [
     milestone: 2400, current: 2399, unit: '승', title: '구단 통산 2,400승', recent: [1, 1, 0, 1, 0],
     season: { 경기: 76, 승: 42, 패: 31, 무: 3, 순위: '3위' }, note: '승리 하나가 남아 있어요.',
   },
+  {
+    id: 104, scope: '구단', date: '2026-07-01', game: 'hh-lg', team: 'LG', entity: 'LG 트윈스',
+    milestone: 9500, current: 9498, unit: '안타', title: '구단 통산 9,500안타', recent: [9, 12, 7, 11, 8],
+    season: { 경기: 75, 승: 44, 패: 29, 무: 2, 순위: '2위' }, note: '팀 안타 2개를 추가하면 달성하는 기록이에요.',
+  },
 ];
 
 const VENUE_RECORD_INPUTS = [
@@ -137,6 +212,11 @@ const VENUE_RECORD_INPUTS = [
     milestone: 12000, current: 11992, unit: '안타', title: '구장 통산 12,000안타', recent: [14, 9, 17, 12, 11],
     season: { 경기: 38, 홈런: 72, 득점: 337, 안타: 668, 평균득점: '8.9' }, note: '양 팀 합계 8안타가 필요해요.',
   },
+  {
+    id: 204, scope: '구장', date: '2026-07-01', game: 'hh-lg', team: 'LG', entity: '잠실구장', venue: '잠실',
+    milestone: 7000, current: 6997, unit: '득점', title: '잠실 통산 7,000득점', recent: [6, 5, 9, 4, 7],
+    season: { 경기: 39, 홈런: 58, 득점: 329, 안타: 684, 평균득점: '8.4' }, note: '양 팀 합계 3득점이 더 나오면 달성해요.',
+  },
 ];
 
 const ALL_RECORDS = [...RECORD_INPUTS, ...TEAM_RECORD_INPUTS, ...VENUE_RECORD_INPUTS];
@@ -145,12 +225,20 @@ function getRecordState(record) {
   const remaining = Math.max(record.milestone - record.current, 0);
   const recentAverage = record.recent.reduce((sum, value) => sum + value, 0) / record.recent.length;
   const likelihood = remaining === 0 ? '달성' : remaining <= Math.max(1, recentAverage) ? '매우 유력' : remaining <= Math.max(2, recentAverage * 2) ? '주목' : '도전';
-  return { remaining, likelihood, progress: Math.min((record.current / record.milestone) * 100, 100) };
+  const key = likelihood === '매우 유력' ? 'hot' : likelihood === '주목' ? 'watch' : likelihood === '달성' ? 'done' : 'try';
+  return { remaining, likelihood, key, progress: Math.min((record.current / record.milestone) * 100, 100) };
 }
 
 function TeamMark({ code, small = false }) {
   const team = TEAMS[code];
   return <span className={`team-mark ${small ? 'small' : ''}`} style={{ '--team-color': team.color }}>{team.name.slice(0, 2)}</span>;
+}
+
+function getOpponent(game, favoriteTeam) {
+  if (!game) return null;
+  if (game.away === favoriteTeam) return game.home;
+  if (game.home === favoriteTeam) return game.away;
+  return null;
 }
 
 function RecordMark({ record }) {
@@ -175,13 +263,64 @@ function GameCard({ game, selected, favorite, onSelect }) {
   );
 }
 
+function LiveGamePanel({ game }) {
+  if (!game) return null;
+  const feed = LIVE_FEEDS[game.id] || DEFAULT_LIVE_FEED;
+
+  return (
+    <section className="live-panel">
+      <div className="live-scoreboard">
+        <div>
+          <span className={`live-status ${feed.status === 'LIVE' ? 'on' : ''}`}><Radio size={13} /> {feed.status}</span>
+          <h2>{TEAMS[game.away].name} vs {TEAMS[game.home].name}</h2>
+          <p>{feed.inning} · {game.venue} · {game.weather}</p>
+        </div>
+        <div className="score-box">
+          <span><TeamMark code={game.away} small /> <b>{feed.score.away}</b></span>
+          <em>:</em>
+          <span><TeamMark code={game.home} small /> <b>{feed.score.home}</b></span>
+        </div>
+      </div>
+
+      <div className="live-current">
+        <div className="diamond" aria-label="주자 상황">
+          {feed.bases.map((occupied, index) => <span key={index} className={occupied ? 'occupied' : ''} />)}
+        </div>
+        <div className="count-strip">
+          <span>OUT <b>{feed.outs}</b></span>
+          <span>투수 <b>{feed.pitcher}</b></span>
+          <span>타자 <b>{feed.batter}</b></span>
+        </div>
+      </div>
+
+      <div className="live-headline">
+        <Activity size={16} />
+        <p>{feed.headline}</p>
+      </div>
+
+      <div className="textcast-list">
+        {feed.timeline.map((event) => (
+          <article key={`${event.time}-${event.label}`}>
+            <time>{event.time}</time>
+            <div>
+              <b>{event.label}</b>
+              <p>{event.text}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+      <p className="live-source-note">현재는 샘플 문자중계입니다. 실제 서비스에서는 허가된 경기 데이터 API 또는 자체 입력 피드로 교체해야 합니다.</p>
+    </section>
+  );
+}
+
 function RecordCard({ record, onOpen }) {
   const state = getRecordState(record);
   const game = GAMES[record.date].find((item) => item.id === record.game);
   return (
     <button className="record-card" onClick={() => onOpen(record)}>
       <span className="record-topline">
-        <span className={`chance chance-${state.likelihood}`}>{state.likelihood}</span>
+        <span className={`chance chance-${state.key}`}>{state.likelihood}</span>
         <span className="record-game">{TEAMS[game.away].name} vs {TEAMS[game.home].name}</span>
       </span>
       <span className="player-row">
@@ -263,9 +402,10 @@ function TeamSettings({ current, onSave, onClose }) {
 }
 
 function App() {
-  const [date, setDate] = useState('2026-06-30');
+  const [date, setDate] = useState('2026-07-01');
   const [favoriteTeam, setFavoriteTeam] = useState(() => localStorage.getItem('favoriteTeamV2') || 'LG');
-  const [selectedGame, setSelectedGame] = useState('all');
+  const [liveGameId, setLiveGameId] = useState('hh-lg');
+  const [teamView, setTeamView] = useState('favorite');
   const [scope, setScope] = useState('선수');
   const [role, setRole] = useState('전체');
   const [query, setQuery] = useState('');
@@ -274,16 +414,29 @@ function App() {
   const [mobileView, setMobileView] = useState('records');
 
   const games = GAMES[date] || [];
+  const favoriteGame = games.find((game) => game.away === favoriteTeam || game.home === favoriteTeam);
+  const opponentTeam = getOpponent(favoriteGame, favoriteTeam);
+  const liveGame = games.find((game) => game.id === liveGameId) || favoriteGame || games[0];
+  const dateLabel = date === '2026-07-01' ? '오늘' : `${Number(date.slice(5, 7))}월 ${Number(date.slice(8))}일`;
+
   const records = useMemo(() => ALL_RECORDS
     .filter((record) => record.date === date)
     .filter((record) => (record.scope || '선수') === scope)
-    .filter((record) => selectedGame === 'all' || record.game === selectedGame)
+    .filter((record) => {
+      if (teamView === 'all') return true;
+      if (teamView === 'opponent') return opponentTeam ? record.team === opponentTeam : false;
+      if (record.scope === '구장') return favoriteGame ? record.game === favoriteGame.id : false;
+      return record.team === favoriteTeam;
+    })
     .filter((record) => scope !== '선수' || role === '전체' || record.role === role)
     .filter((record) => !query || `${record.player || ''} ${record.entity || ''} ${record.title} ${TEAMS[record.team].name}`.includes(query.trim()))
-    .sort((a, b) => Number(b.team === favoriteTeam) - Number(a.team === favoriteTeam) || getRecordState(a).remaining - getRecordState(b).remaining),
-  [date, selectedGame, scope, role, query, favoriteTeam]);
+    .sort((a, b) => getRecordState(a).remaining - getRecordState(b).remaining),
+  [date, scope, teamView, opponentTeam, favoriteGame, favoriteTeam, role, query]);
 
-  useEffect(() => setSelectedGame('all'), [date]);
+  useEffect(() => {
+    setLiveGameId((favoriteGame || games[0])?.id || '');
+    setTeamView('favorite');
+  }, [date, favoriteTeam]);
 
   const changeDate = (direction) => {
     const index = DAYS.findIndex((day) => day.key === date);
@@ -306,24 +459,39 @@ function App() {
       <main>
         <section className="date-bar">
           <button className="icon-button" onClick={() => changeDate(-1)} aria-label="이전 날짜"><ArrowLeft size={19} /></button>
-          <div><CalendarDays size={18} /><b>{date === '2026-06-30' ? '오늘' : `${Number(date.slice(5, 7))}월 ${Number(date.slice(8))}일`} · {DAYS.find((day) => day.key === date).day}요일</b><span className="demo-badge">DEMO</span></div>
+          <div><CalendarDays size={18} /><b>{dateLabel} · {DAYS.find((day) => day.key === date).day}요일</b><span className="demo-badge">DEMO</span></div>
           <button className="icon-button" onClick={() => changeDate(1)} aria-label="다음 날짜"><ArrowRight size={19} /></button>
         </section>
 
         <section className={`schedule-section ${mobileView !== 'schedule' ? 'mobile-panel-hidden' : ''}`}>
-          <div className="section-title"><div><span className="eyebrow">GAME SCHEDULE</span><h1>오늘의 경기</h1></div><span>{games.length}경기</span></div>
+          <div className="section-title"><div><span className="eyebrow">GAME SCHEDULE</span><h1>{dateLabel} 경기</h1></div><span>{games.length}경기</span></div>
           <div className="game-scroller">
-            <button className={`game-card all-game ${selectedGame === 'all' ? 'selected' : ''}`} onClick={() => setSelectedGame('all')}>
-              <span className="all-icon"><CalendarDays size={20} /></span><b>전체 경기</b><span>모든 기록 보기</span>
-            </button>
-            {games.map((game) => <GameCard key={game.id} game={game} selected={selectedGame === game.id} favorite={game.away === favoriteTeam || game.home === favoriteTeam} onSelect={(gameId) => { setSelectedGame(gameId); setMobileView('records'); }} />)}
+            {games.map((game) => (
+              <GameCard
+                key={game.id}
+                game={game}
+                selected={liveGame?.id === game.id}
+                favorite={game.away === favoriteTeam || game.home === favoriteTeam}
+                onSelect={setLiveGameId}
+              />
+            ))}
           </div>
+          <LiveGamePanel game={liveGame} />
         </section>
 
         <section className={`records-section ${mobileView !== 'records' ? 'mobile-panel-hidden' : ''}`}>
           <div className="record-header">
-            <div><span className="eyebrow">POSSIBLE RECORDS</span><h2>달성 가능 기록 <b>{records.length}</b></h2></div>
+            <div><span className="eyebrow">POSSIBLE RECORDS</span><h2>{TEAMS[favoriteTeam].name} 오늘 기록 <b>{records.length}</b></h2></div>
             <button className="icon-button desktop-search-toggle" aria-label="검색"><Search size={19} /></button>
+          </div>
+          <div className="team-view-tabs" aria-label="팀 기록 보기">
+            {[
+              { id: 'favorite', label: `${TEAMS[favoriteTeam].name} 기록` },
+              { id: 'opponent', label: opponentTeam ? `${TEAMS[opponentTeam].name} 기록` : '상대 기록' },
+              { id: 'all', label: '전체 기록' },
+            ].map((item) => (
+              <button key={item.id} className={teamView === item.id ? 'active' : ''} onClick={() => setTeamView(item.id)}>{item.label}</button>
+            ))}
           </div>
           <div className="scope-tabs" aria-label="기록 범위">
             {[
@@ -343,12 +511,12 @@ function App() {
           {records.length > 0 ? (
             <div className="record-list">{records.map((record) => <RecordCard key={record.id} record={record} onOpen={setDetail} />)}</div>
           ) : (
-            <div className="empty-state"><SlidersHorizontal size={28} /><h3>조건에 맞는 기록이 없어요</h3><p>다른 경기나 선수 유형을 선택해보세요.</p><button onClick={() => { setSelectedGame('all'); setRole('전체'); setQuery(''); }}>필터 초기화</button></div>
+            <div className="empty-state"><SlidersHorizontal size={28} /><h3>조건에 맞는 기록이 없어요</h3><p>상대 기록이나 전체 기록 보기로 전환해보세요.</p><button onClick={() => { setTeamView('favorite'); setRole('전체'); setQuery(''); }}>필터 초기화</button></div>
           )}
         </section>
       </main>
 
-      <footer><span>기능 검토용 자체 계산 데모</span><p>KBO 및 구단의 공식 서비스가 아니며, 표시된 일정과 기록은 샘플 데이터입니다.</p></footer>
+      <footer><span>기능 검토용 자체 계산 데모</span><p>KBO 및 구단의 공식 서비스가 아니며, 표시된 일정과 기록, 문자중계는 샘플 데이터입니다.</p></footer>
 
       <nav className="mobile-nav">
         <button className={mobileView === 'records' ? 'active' : ''} onClick={() => { setMobileView('records'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}><Target size={21} /><span>오늘 기록</span></button>
